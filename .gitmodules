@@ -1,0 +1,4 @@
+[submodule "popug-inventory"]
+	path = popug-inventory
+	url = git@github.com:davydovanton/popug-inventory.git
+	branch = separate-auth-service-in-docker
