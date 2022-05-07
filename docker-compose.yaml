@@ -39,8 +39,6 @@ services:
     build: popug-inventory/auth
     container_name: auth-web
     command: [ 'rails', 'server', '-p', '3000', '-b', '0.0.0.0' ]
-    ports:
-      - "3000:3000"
     depends_on:
       - auth-db
       - broker
@@ -49,3 +47,21 @@ services:
       DATABASE_URL: 'postgres://auth:auth@auth-db:5432/auth'
       KAFKA_URL: 'kafka://broker:29092'
       BROKER_ADAPTER: 'kafka'
+    ports:
+      - '3000:3000'
+
+  task-tracker-web:
+    build: task-tracker
+    container_name: task-tracker-web
+    depends_on:
+      - broker
+    environment:
+      DATABASE_URL: postgres://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      AUTH_OAUTH_CLIENT_ID: XzU4skVQWMvtWYwtIXmTg42_mZNUU7LNWCSu4bNN_DU
+      AUTH_OAUTH_CLIENT_SECRET: SQcwoSv9gt1d5s7d_4gaCYgCQ0Lecz-1nrh0F8rZc-E
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+    volumes:
+      - ./task-tracker:/app
+    ports:
+      - '3001:8000'
