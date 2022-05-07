@@ -25,6 +25,16 @@ services:
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - broker
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
+    ports:
+      - '3099:8080'
+
   auth-db:
     image: postgres
     container_name: auth-db
@@ -51,10 +61,10 @@ services:
       - '3000:3000'
 
   task-tracker-web:
-    build: task-tracker
+    build:
+      context: task-tracker
+      target: web-server
     container_name: task-tracker-web
-    depends_on:
-      - broker
     environment:
       DATABASE_URL: postgres://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
       AUTH_OAUTH_CLIENT_ID: XzU4skVQWMvtWYwtIXmTg42_mZNUU7LNWCSu4bNN_DU
@@ -65,3 +75,16 @@ services:
       - ./task-tracker:/app
     ports:
       - '3001:8000'
+
+  task-tracker-event-consumer:
+    build:
+      context: task-tracker
+      target: event-consumer
+    container_name: task-tracker-consumer
+    depends_on:
+      - broker
+    environment:
+      DATABASE_URL: postgres://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+    volumes:
+      - ./task-tracker:/app

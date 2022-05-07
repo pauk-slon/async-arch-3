@@ -1,3 +1,4 @@
+aiokafka
 fastapi
 httpx
 python-multipart
