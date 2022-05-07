@@ -2,6 +2,7 @@ from fastapi import Depends, FastAPI, Form, HTTPException
 from fastapi.security.oauth2 import OAuth2AuthorizationCodeBearer
 
 from task_tracker import auth
+from task_tracker import database
 
 auth_client = auth.Client()
 app = FastAPI(
@@ -23,6 +24,12 @@ oauth2_scheme = OAuth2AuthorizationCodeBearer(
         'public_id': "Get public ID of the current user.",
     },
 )
+database_settings = database.Settings()
+
+
+@app.on_event('startup')
+async def on_startup():
+    await database.setup(database_settings)
 
 
 @app.post('/oauth/token', include_in_schema=False)

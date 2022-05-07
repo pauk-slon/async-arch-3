@@ -1,6 +1,7 @@
 import asyncio
 import logging
 
+from task_tracker import database
 from task_tracker.event_streaming import consumer
 from task_tracker.event_streaming.config import Settings
 import task_tracker.event_streaming.handlers  # noqa
@@ -10,4 +11,9 @@ group = 'task-tracker'
 
 logging.basicConfig(level=logging.INFO)
 
-asyncio.run(consumer.run(Settings(), topics, group), debug=True)
+
+async def main():
+    await database.setup(database.Settings())
+    await consumer.run(Settings(), topics, group)
+
+asyncio.run(main(), debug=True)
