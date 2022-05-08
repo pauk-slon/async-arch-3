@@ -33,10 +33,6 @@ class Client:
         return urljoin(self.settings.url, endpoint_path)
 
     @property
-    def introspection_internal_url(self):
-        return urljoin(self.settings.internal_url, 'introspect')
-
-    @property
     def root_netloc(self):
         return urlparse(self.settings.url).netloc
 
