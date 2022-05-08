@@ -36,6 +36,7 @@ async def get_current_account(
     session: AsyncSession = Depends(get_session),
 ) -> Account:
     try:
+        # TODO: cache a map token -> public_id until the token is not expired
         account_data = await auth_client.fetch_account(token)
     except auth.OAuthError as error:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(error))
