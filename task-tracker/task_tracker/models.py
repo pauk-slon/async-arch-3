@@ -14,4 +14,4 @@ class Account(SQLModel, table=True):
     public_id: str = Field(sa_column_kwargs={'unique': True})
     email: str = Field(sa_column_kwargs={'unique': True})
     full_name: str
-    role: AccountRole = Field(sa_column=Column('role', Enum(AccountRole)))
+    role: AccountRole | None = Field(sa_column=Column('role', Enum(AccountRole)))

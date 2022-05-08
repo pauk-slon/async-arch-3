@@ -14,7 +14,7 @@ class Settings(BaseSettings):
 
 
 def create_session() -> AsyncSession:
-    return sessionmaker(engine, AsyncSession, expire_on_commit=False)()
+    return sessionmaker(engine, AsyncSession)()
 
 
 async def setup(settings: Settings):
