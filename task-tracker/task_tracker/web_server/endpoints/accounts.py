@@ -27,5 +27,5 @@ async def list_accounts(
 
 
 @router.get('/current', response_model=Account)
-async def list_accounts(account: Account = Depends(get_current_account)):
+async def get_current_account(account: Account = Depends(get_current_account)):
     return account
