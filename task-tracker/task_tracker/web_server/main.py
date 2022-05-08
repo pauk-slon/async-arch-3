@@ -4,6 +4,7 @@ from task_tracker import auth
 from task_tracker import database
 from task_tracker.web_server.dependences import get_auth_client
 from task_tracker.web_server.endpoints import accounts
+from task_tracker.web_server.endpoints import tasks
 
 app = FastAPI(
     title="Task Tracker",
@@ -17,12 +18,13 @@ app = FastAPI(
         'persistAuthorization': True,
     }
 )
-database_settings = database.Settings()
+app.include_router(accounts.router)
+app.include_router(tasks.router)
 
 
 @app.on_event('startup')
 async def on_startup():
-    await database.setup(database_settings)
+    await database.setup(database.Settings())
 
 
 @app.post('/oauth/token', include_in_schema=False)
@@ -42,6 +44,3 @@ async def proxy_token(
         return await auth_client.fetch_token_by_authorization_code(code, redirect_uri)
     except auth.OAuthError as error:
         raise HTTPException(status_code=400, detail=str(error))
-
-
-app.include_router(accounts.router)

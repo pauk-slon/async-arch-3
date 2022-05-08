@@ -18,7 +18,7 @@ router = APIRouter(
 @router.get('/', response_model=List[Account])
 async def list_accounts(
     session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account)
+    account: Account = Depends(get_current_account),
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(status.HTTP_403_FORBIDDEN)

@@ -12,10 +12,11 @@ logger = logging.getLogger(__name__)
 @consumer.event_handler('AccountCreated')
 async def on_account_created(event_data):
     logger.info('AccountCreated: %s', event_data)
-    async with database.create_session() as session:
-        account = Account(**event_data)
-        session.add(account)
-        await session.commit()
+    # public_id is NONE
+    # async with database.create_session() as session:
+    #     account = Account(**event_data)
+    #    session.add(account)
+    #    await session.commit()
 
 
 @consumer.event_handler('AccountUpdated')
