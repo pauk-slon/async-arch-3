@@ -49,8 +49,8 @@ class Client:
         payload = {
             'grant_type': 'authorization_code',
             'code': code,
-            'oauth_client_id': self.settings.oauth_client_id,
-            'oauth_client_secret': self.settings.oauth_client_secret,
+            'client_id': self.settings.oauth_client_id,
+            'client_secret': self.settings.oauth_client_secret,
             'redirect_uri': redirect_uri,
         }
         token_url = self._compose_internal_url('oauth/token')
