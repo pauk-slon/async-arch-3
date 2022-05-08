@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from starlette import status as statuses
 from sqlalchemy import select, asc
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_tracker.models import Account, AccountRole, Task, TaskStatus
@@ -43,9 +44,11 @@ async def get_task(
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
-    return (await session.execute(
-        select(Task).where(Task.id == task_id)
-    )).scalars().one()
+    result = await session.execute(select(Task).where(Task.id == task_id))
+    try:
+        return result.one()
+    except NoResultFound:
+        raise HTTPException(statuses.HTTP_404_NOT_FOUND)
 
 
 @router.patch('/{task_id}', response_model=Task)
@@ -57,9 +60,11 @@ async def update_task(
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
-    task = (await session.execute(
-        select(Task).where(Task.id == task_id)
-    )).scalars().one()
+    task_result = await session.execute(select(Task).where(Task.id == task_id))
+    try:
+        task = task_result.scalars().one()
+    except NoResultFound:
+        raise HTTPException(statuses.HTTP_404_NOT_FOUND)
     task_data = task_write.dict(exclude_unset=True)
     for key, value in task_data.items():
         setattr(task, key, value)
@@ -87,12 +92,16 @@ async def get_my_task(
     session: AsyncSession = Depends(get_session),
     account: Account = Depends(get_current_account),
 ):
-    return (await session.execute(
+    result = await session.execute(
         select(Task).where(
             Task.assignee_id == account.id,
             Task.id == task_id,
         )
-    )).scalars().one()
+    )
+    try:
+        return result.scalars().one()
+    except NoResultFound:
+        raise HTTPException(statuses.HTTP_404_NOT_FOUND)
 
 
 @router.post('/my/{task_id}/close', response_model=Task)
@@ -101,12 +110,16 @@ async def close_my_task(
     session: AsyncSession = Depends(get_session),
     account: Account = Depends(get_current_account),
 ):
-    task: Task = (await session.execute(
+    task_result = await session.execute(
         select(Task).where(
             Task.assignee_id == account.id,
             Task.id == task_id,
         )
-    )).scalars().one()
+    )
+    try:
+        task: Task = task_result.scalars().one()
+    except NoResultFound:
+        raise HTTPException(statuses.HTTP_404_NOT_FOUND)
     if task.is_closed():
         raise HTTPException(statuses.HTTP_400_BAD_REQUEST, detail="Task already closed.")
     task.close()
@@ -122,12 +135,16 @@ async def reopen_my_task(
     session: AsyncSession = Depends(get_session),
     account: Account = Depends(get_current_account),
 ):
-    task: Task = (await session.execute(
+    task_result = await session.execute(
         select(Task).where(
             Task.assignee_id == account.id,
             Task.id == task_id,
         )
-    )).scalars().one()
+    )
+    try:
+        task: Task = task_result.scalars().one()
+    except NoResultFound:
+        raise HTTPException(statuses.HTTP_404_NOT_FOUND)
     if not task.is_closed():
         raise HTTPException(statuses.HTTP_400_BAD_REQUEST, detail="Task should be closed.")
     task.reopen()
@@ -143,7 +160,7 @@ async def create_task(
     session: AsyncSession = Depends(get_session),
     account: Account = Depends(get_current_account),
 ):
-    workers = (await session.execute(
+    workers: List[Account] = (await session.execute(
         select(Account).where(Account.role == AccountRole.worker)
     )).scalars().all()
     if not workers:
