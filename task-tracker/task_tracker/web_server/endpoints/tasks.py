@@ -2,7 +2,7 @@ import random
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, constr
 from starlette import status as statuses
 from sqlalchemy import select, asc
 from sqlalchemy.exc import NoResultFound
@@ -19,6 +19,7 @@ router = APIRouter(
 
 
 class TaskWrite(BaseModel):
+    title: constr(max_length=50, strip_whitespace=True)
     description: str
 
 
@@ -170,6 +171,7 @@ async def create_task(
         )
     assignee: Account = random.choice(workers)
     task = Task(
+        title=task_write.title,
         description=task_write.description,
         reporter_id=account.id,
         assignee_id=assignee.id,
