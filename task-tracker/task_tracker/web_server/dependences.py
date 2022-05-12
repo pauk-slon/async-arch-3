@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from task_tracker import auth
 from task_tracker import database
+from task_tracker.event_streaming import aiokafka
 from task_tracker.models import Account
 
 
@@ -48,3 +49,7 @@ async def get_current_account(
     if not account:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unknown account")
     return account
+
+
+def get_producer() -> aiokafka.Producer:
+    return aiokafka.producer

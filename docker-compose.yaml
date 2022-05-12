@@ -73,6 +73,7 @@ services:
       AUTH_OAUTH_CLIENT_SECRET: SQcwoSv9gt1d5s7d_4gaCYgCQ0Lecz-1nrh0F8rZc-E
       AUTH_URL: http://localhost:3000
       AUTH_INTERNAL_URL: http://auth-web:3000
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
     volumes:
       - ./task-tracker:/app
     ports:
@@ -101,3 +102,5 @@ services:
       POSTGRES_DB: tasktracker
       POSTGRES_USER: tasktracker
       POSTGRES_PASSWORD: tasktracker
+    ports:
+      - '3002:5432'

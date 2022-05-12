@@ -1,4 +1,5 @@
 import enum
+from typing import List
 import uuid
 
 from sqlmodel import Field, Column, SQLModel, Enum, Relationship
@@ -16,6 +17,8 @@ class Account(SQLModel, table=True):
     email: str = Field(sa_column_kwargs={'unique': True})
     full_name: str
     role: AccountRole | None = Field(sa_column=Column('role', Enum(AccountRole)))
+    reported_tasks: List['Task'] = Relationship(back_populates='reporter')
+    assigned_tasks: List['Task'] = Relationship(back_populates='assignee')
 
 
 class TaskStatus(enum.Enum):
@@ -30,9 +33,9 @@ class Task(SQLModel, table=True):
     title: str = Field(max_length=50, sa_column_kwargs={'unique': True})
     description: str = Field(default='')
     reporter_id: int = Field(foreign_key='account.id')
-    reporter: Account | None = Relationship(back_populates='reported_tasks')
+    reporter: Account = Relationship(back_populates='reported_tasks')
     assignee_id: int = Field(foreign_key='account.id')
-    assignee: Account | None = Relationship(back_populates='assigned_tasks')
+    assignee: Account = Relationship(back_populates='assigned_tasks')
 
     def close(self):
         self.status = TaskStatus.closed

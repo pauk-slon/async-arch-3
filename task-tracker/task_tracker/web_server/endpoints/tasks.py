@@ -8,14 +8,18 @@ from sqlalchemy import select, asc
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from task_tracker.event_streaming import aiokafka
 from task_tracker.models import Account, AccountRole, Task, TaskStatus
-from task_tracker.web_server.dependences import get_session, get_current_account
+from task_tracker.web_server.dependences import get_session, get_current_account, get_producer
 
 router = APIRouter(
     prefix='/tasks',
     tags=['tasks'],
     responses={statuses.HTTP_404_NOT_FOUND: {'description': "Not Found"}},
 )
+task_lifecycle_topic = 'task-lifecycle'
+task_stream_topic = 'task-stream'
+task_stream_fields = {'public_id', 'title', 'description'}
 
 
 class TaskWrite(BaseModel):
@@ -25,9 +29,9 @@ class TaskWrite(BaseModel):
 
 @router.get('/', response_model=List[Task])
 async def list_tasks(
-    status: TaskStatus | None = None,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        status: TaskStatus | None = None,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
@@ -39,9 +43,9 @@ async def list_tasks(
 
 @router.get('/{task_id}', response_model=Task)
 async def get_task(
-    task_id: int,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_id: int,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
@@ -54,16 +58,17 @@ async def get_task(
 
 @router.patch('/{task_id}', response_model=Task)
 async def update_task(
-    task_id: int,
-    task_write: TaskWrite,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_id: int,
+        task_write: TaskWrite,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
+        producer: aiokafka.Producer = Depends(get_producer)
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
     task_result = await session.execute(select(Task).where(Task.id == task_id))
     try:
-        task = task_result.scalars().one()
+        task: Task = task_result.scalars().one()
     except NoResultFound:
         raise HTTPException(statuses.HTTP_404_NOT_FOUND)
     task_data = task_write.dict(exclude_unset=True)
@@ -72,14 +77,19 @@ async def update_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await producer.send(
+        task_stream_topic,
+        'TaskUpdated',
+        task.dict(include=task_stream_fields),
+    )
     return task
 
 
 @router.get('/my/', response_model=List[Task])
 async def list_my_tasks(
-    status: TaskStatus | None = None,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        status: TaskStatus | None = None,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
 ):
     query = select(Task).where(Task.assignee_id == account.id)
     if status:
@@ -89,9 +99,9 @@ async def list_my_tasks(
 
 @router.get('/my/{task_id}', response_model=Task)
 async def get_my_task(
-    task_id: int,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_id: int,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
 ):
     result = await session.execute(
         select(Task).where(
@@ -107,9 +117,10 @@ async def get_my_task(
 
 @router.post('/my/{task_id}/close', response_model=Task)
 async def close_my_task(
-    task_id: int,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_id: int,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
+        producer: aiokafka.Producer = Depends(get_producer),
 ):
     task_result = await session.execute(
         select(Task).where(
@@ -127,14 +138,21 @@ async def close_my_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    assignee = await session.get(Account, task.assignee_id)
+    await producer.send(
+        task_lifecycle_topic,
+        'TaskClosed',
+        {'task': task.public_id, 'assignee': assignee.public_id},
+    )
     return task
 
 
 @router.post('/my/{task_id}/reopen', response_model=Task)
 async def reopen_my_task(
-    task_id: int,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_id: int,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
+        producer: aiokafka.Producer = Depends(get_producer),
 ):
     task_result = await session.execute(
         select(Task).where(
@@ -152,14 +170,21 @@ async def reopen_my_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    assignee = await session.get(Account, task.assignee_id)
+    await producer.send(
+        task_lifecycle_topic,
+        'TaskAssigned',
+        {'task': task.public_id, 'assignee': assignee.public_id},
+    )
     return task
 
 
 @router.post('/', response_model=Task)
 async def create_task(
-    task_write: TaskWrite,
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        task_write: TaskWrite,
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
+        producer: aiokafka.Producer = Depends(get_producer),
 ):
     workers: List[Account] = (await session.execute(
         select(Account).where(Account.role == AccountRole.worker)
@@ -179,13 +204,30 @@ async def create_task(
     session.add(task)
     await session.commit()
     await session.refresh(task)
+    await session.refresh(assignee)
+    await producer.send(
+        task_stream_topic,
+        'TaskCreated',
+        task.dict(include=task_stream_fields),
+    )
+    await producer.send(
+        task_lifecycle_topic,
+        'TaskAdded',
+        {'task': task.public_id},
+    )
+    await producer.send(
+        task_lifecycle_topic,
+        'TaskAssigned',
+        {'task': task.public_id, 'assignee': assignee.public_id},
+    )
     return task
 
 
 @router.post('/shuffle')
 async def shuffle_tasks(
-    session: AsyncSession = Depends(get_session),
-    account: Account = Depends(get_current_account),
+        session: AsyncSession = Depends(get_session),
+        account: Account = Depends(get_current_account),
+        producer: aiokafka.Producer = Depends(get_producer),
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
@@ -203,8 +245,9 @@ async def shuffle_tasks(
     result = []
     for task in open_tasks:
         new_assignee = random.choice(workers)
-        result.append((task.id, task.assignee_id, new_assignee.id))
+        result.append({'task': task.public_id, 'assignee': new_assignee.public_id})
         task.assign(new_assignee)
         session.add(task)
+    for result_item in result:
+        await producer.send(task_lifecycle_topic, 'TaskAssigned', result_item)
     await session.commit()
-    return result

@@ -2,8 +2,7 @@ import asyncio
 import logging
 
 from task_tracker import database
-from task_tracker.event_streaming import consumer
-from task_tracker.event_streaming.config import Settings
+from task_tracker.event_streaming import aiokafka
 import task_tracker.event_streaming.handlers  # noqa
 
 topics = 'accounts-stream', 'accounts'
@@ -14,6 +13,6 @@ logging.basicConfig(level=logging.INFO)
 
 async def main():
     await database.setup(database.Settings())
-    await consumer.run(Settings(), topics, group)
+    await aiokafka.consume(aiokafka.Settings(), topics, group)
 
 asyncio.run(main(), debug=True)
