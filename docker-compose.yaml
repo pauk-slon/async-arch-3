@@ -1,0 +1,106 @@
+version: '3.8'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.0.1
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+
+  broker:
+    image: confluentinc/cp-kafka:7.0.1
+    container_name: broker
+    ports:
+    # To learn about configuring Kafka for access across networks see
+    # https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://broker:29092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    depends_on:
+      - broker
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
+    ports:
+      - '3099:8080'
+
+  auth-db:
+    image: postgres
+    container_name: auth-db
+    volumes:
+      - .local/auth-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: auth
+      POSTGRES_USER: auth
+      POSTGRES_PASSWORD: auth
+
+  auth-web:
+    build: popug-inventory/auth
+    container_name: auth-web
+    command: [ 'rails', 'server', '-p', '3000', '-b', '0.0.0.0' ]
+    depends_on:
+      - auth-db
+      - broker
+    environment:
+      RAILS_ENV: 'development'
+      DATABASE_URL: 'postgres://auth:auth@auth-db:5432/auth'
+      KAFKA_URL: 'kafka://broker:29092'
+      BROKER_ADAPTER: 'kafka'
+    ports:
+      - '3000:3000'
+
+  task-tracker-web:
+    build:
+      context: task-tracker
+      target: web-server
+    container_name: task-tracker-web
+    depends_on:
+      - task-tracker-db
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      AUTH_OAUTH_CLIENT_ID: XzU4skVQWMvtWYwtIXmTg42_mZNUU7LNWCSu4bNN_DU
+      AUTH_OAUTH_CLIENT_SECRET: SQcwoSv9gt1d5s7d_4gaCYgCQ0Lecz-1nrh0F8rZc-E
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+    volumes:
+      - ./task-tracker:/app
+    ports:
+      - '3001:8000'
+
+  task-tracker-event-consumer:
+    build:
+      context: task-tracker
+      target: event-consumer
+    container_name: task-tracker-consumer
+    depends_on:
+      - task-tracker-db
+      - broker
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+    volumes:
+      - ./task-tracker:/app
+
+  task-tracker-db:
+    image: postgres
+    container_name: task-tracker-db
+    volumes:
+      - .local/task-tracker-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: tasktracker
+      POSTGRES_USER: tasktracker
+      POSTGRES_PASSWORD: tasktracker
+    ports:
+      - '3002:5432'
