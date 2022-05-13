@@ -5,7 +5,7 @@ import event_streaming
 from accounting import database
 import accounting.event_streaming.handlers  # noqa
 
-topics = 'accounts-stream', 'task-stream', 'task-lifecycle'
+topics = 'accounts-stream', 'accounts', 'task-stream', 'task-lifecycle',
 group = 'accounting'
 
 logging.basicConfig(level=logging.INFO)

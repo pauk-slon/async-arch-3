@@ -4,8 +4,9 @@ import logging
 import event_streaming
 from accounting import database
 from accounting.models import Account, AccountRole, Task
+from accounting.transactions.billing import initialize_account
+from accounting.transactions.tasks import price_task, charge_fee_for_task_assignment, assess_amount_for_task_completion
 from accounting.transactions.utils import get_or_create
-from accounting.transactions.tasks import price_task, charge_fee_for_task_assignment
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +36,9 @@ async def on_account_role_changed(event_name: str, event_data: Mapping[str, Any]
         account, _created = await get_or_create(session, Account, public_id=public_id)
         account.role = AccountRole(event_data['role'])
         await session.commit()
+        await session.refresh(account)
+    if account.role == AccountRole.worker:
+        await initialize_account(account.public_id)
 
 
 @event_streaming.on_event('TaskCreated')
@@ -56,8 +60,14 @@ async def on_task_added(event_name: str, event_data: Mapping[str, Any]):
 
 
 @event_streaming.on_event('TaskAssigned')
+@event_streaming.on_event('TaskClosed')
 async def on_task_assigned(event_name: str, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     task = event_data['task']
+    await price_task(task)  # if TaskAdded is haven't gotten yet
     account = event_data['assignee']
-    await charge_fee_for_task_assignment(task, account)
+    await initialize_account(account)
+    if event_name == 'TaskAssigned':
+        await charge_fee_for_task_assignment(task, account)
+    elif event_name == 'TaskClosed':
+        await assess_amount_for_task_completion(task, account)
