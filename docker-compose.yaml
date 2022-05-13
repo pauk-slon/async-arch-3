@@ -128,3 +128,37 @@ services:
       timeout: 45s
       interval: 10s
       retries: 10
+
+  accounting-event-consumer:
+    image: accounting:last
+    build: accounting
+    container_name: accounting-consumer
+    depends_on:
+      accounting-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+    volumes:
+      - ./accounting:/app
+      - ./common:/common
+    command: ["python", "-m", "accounting.event_streaming"]
+
+  accounting-db:
+    image: postgres
+    container_name: accounting-db
+    volumes:
+      - .local/accounting-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: accounting
+      POSTGRES_USER: accounting
+      POSTGRES_PASSWORD: accounting
+    ports:
+      - '3003:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "accounting"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
