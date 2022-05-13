@@ -33,13 +33,13 @@ producer = Producer()
 
 def on_event(event_name):
     def decorator(handler):
-        on_event.registry[event_name].append(handler)
+        on_event.registry[event_name].add(handler)
         return handler
 
     return decorator
 
 
-on_event.registry = defaultdict(list)
+on_event.registry = defaultdict(set)
 
 
 async def consume(settings: Settings, topics, group):
@@ -53,6 +53,6 @@ async def consume(settings: Settings, topics, group):
         async for message in consumer:
             message = json.loads(message.value)
             for handler in on_event.registry[message['event_name']]:
-                await handler(message['data'])
+                await handler(message['event_name'], message['data'])
     finally:
         await consumer.stop()
