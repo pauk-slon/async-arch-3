@@ -24,11 +24,15 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    depends_on:
-      - broker
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: broker:29092
@@ -44,14 +48,22 @@ services:
       POSTGRES_DB: auth
       POSTGRES_USER: auth
       POSTGRES_PASSWORD: auth
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "auth"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
 
   auth-web:
     build: popug-inventory/auth
     container_name: auth-web
     command: [ 'rails', 'server', '-p', '3000', '-b', '0.0.0.0' ]
     depends_on:
-      - auth-db
-      - broker
+      auth-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     environment:
       RAILS_ENV: 'development'
       DATABASE_URL: 'postgres://auth:auth@auth-db:5432/auth'
@@ -66,7 +78,10 @@ services:
       context: task-tracker
     container_name: task-tracker-web
     depends_on:
-      - task-tracker-db
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
       AUTH_OAUTH_CLIENT_ID: XzU4skVQWMvtWYwtIXmTg42_mZNUU7LNWCSu4bNN_DU
@@ -85,8 +100,10 @@ services:
     image: task-tracker:last
     container_name: task-tracker-consumer
     depends_on:
-      - task-tracker-db
-      - broker
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     environment:
       DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
@@ -106,3 +123,8 @@ services:
       POSTGRES_PASSWORD: tasktracker
     ports:
       - '3002:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "tasktracker"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
