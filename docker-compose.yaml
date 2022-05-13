@@ -139,7 +139,7 @@ services:
       broker:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
+      DATABASE_URL: postgresql+asyncpg://accounting:accounting@accounting-db:5432/accounting
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
     volumes:
       - ./accounting:/app

@@ -2,11 +2,11 @@ import asyncio
 import logging
 
 import event_streaming
-from task_tracker import database
-import task_tracker.event_streaming.handlers  # noqa
+from accounting import database
+import accounting.event_streaming.handlers  # noqa
 
 topics = 'accounts-stream', 'task-stream', 'task-lifecycle'
-group = 'task-tracker'
+group = 'accounting'
 
 logging.basicConfig(level=logging.INFO)
 

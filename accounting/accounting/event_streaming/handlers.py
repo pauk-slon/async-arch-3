@@ -1,34 +1,13 @@
-from typing import Any, Mapping, Protocol, Type, TypeVar
+from typing import Any, Mapping
 import logging
-
-from sqlalchemy import select
 
 import event_streaming
 from accounting import database
-from accounting.models import Account, AccountRole, Task, SQLModel
+from accounting.models import Account, AccountRole, Task
+from accounting.transactions.utils import get_or_create
+from accounting.transactions.tasks import price_task, charge_fee_for_task_assignment
 
 logger = logging.getLogger(__name__)
-
-
-class StreamedModelProtocol(Protocol):
-    public_id: str
-
-    def __init__(self, **defaults):
-        pass
-
-
-ModelT = TypeVar('ModelT', bound=SQLModel)
-
-
-async def get_or_create(session, model: Type[ModelT], defaults=None, **filter_kwargs) -> (ModelT, bool):
-    instance: model | None = (await session.execute(select(Task).filter_by(**filter_kwargs))).scalar_one_or_none()
-    created = False
-    if not instance:
-        instance_kwargs = defaults | filter_kwargs if defaults else filter_kwargs
-        instance = model(**instance_kwargs)
-        session.add(instance)
-        created = True
-    return instance, created
 
 
 @event_streaming.on_event('AccountCreated')
@@ -73,7 +52,12 @@ async def on_task_updated(event_name: str, event_data: Mapping[str, Any]):
 async def on_task_added(event_name: str, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     public_id = event_data['task']
-    async with database.create_session() as session:
-        task, _created = await get_or_create(session, Task, public_id=public_id)
-        task.price()
-        await session.commit()
+    await price_task(public_id)
+
+
+@event_streaming.on_event('TaskAssigned')
+async def on_task_assigned(event_name: str, event_data: Mapping[str, Any]):
+    logger.info('%s: %s', event_name, event_data)
+    task = event_data['task']
+    account = event_data['assignee']
+    await charge_fee_for_task_assignment(task, account)

@@ -20,6 +20,6 @@ def create_session() -> AsyncSession:
 async def setup(settings: Settings):
     global engine
     engine = create_async_engine(settings.url, echo=True)
-    from task_tracker import models  # noqa
+    from accounting import models  # noqa
     async with engine.begin() as connection:
         await connection.run_sync(SQLModel.metadata.create_all)
