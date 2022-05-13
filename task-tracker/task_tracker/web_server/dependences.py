@@ -6,9 +6,9 @@ from starlette import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import event_streaming
 from task_tracker import auth
 from task_tracker import database
-from task_tracker.event_streaming import aiokafka
 from task_tracker.models import Account
 
 
@@ -51,5 +51,5 @@ async def get_current_account(
     return account
 
 
-def get_producer() -> aiokafka.Producer:
-    return aiokafka.producer
+def get_producer() -> event_streaming.Producer:
+    return event_streaming.producer

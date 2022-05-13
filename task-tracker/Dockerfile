@@ -1,14 +1,10 @@
-FROM python:3.10 as base
-ENV SRC_PROJECT_PATH /app
-RUN mkdir -p $SRC_PROJECT_PATH
-WORKDIR $SRC_PROJECT_PATH
-COPY requirements.txt $SRC_PROJECT_PATH
+FROM python:3.10
+ENV COMMON_SRC_PATH /common
+RUN mkdir -p $COMMON_SRC_PATH
+ENV PYTHONPATH=$COMMON_SRC_PATH
+ENV APP_SRC_PATH /app
+RUN mkdir -p $APP_SRC_PATH
+WORKDIR $APP_SRC_PATH
+COPY requirements.txt $APP_SRC_PATH
 RUN pip install -r requirements.txt
-COPY . $SRC_PROJECT_PATH
-
-FROM base as web-server
-CMD ["uvicorn", "task_tracker.web_server:app", "--host", "0.0.0.0", "--reload"]
-EXPOSE 8000
-
-FROM base as event-consumer
-CMD ["python", "-m", "task_tracker.event_streaming"]
+COPY . $APP_SRC_PATH

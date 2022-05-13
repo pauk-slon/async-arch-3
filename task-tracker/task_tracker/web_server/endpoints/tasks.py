@@ -8,7 +8,7 @@ from sqlalchemy import select, asc
 from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from task_tracker.event_streaming import aiokafka
+import event_streaming
 from task_tracker.models import Account, AccountRole, Task, TaskStatus
 from task_tracker.web_server.dependences import get_session, get_current_account, get_producer
 
@@ -62,7 +62,7 @@ async def update_task(
         task_write: TaskWrite,
         session: AsyncSession = Depends(get_session),
         account: Account = Depends(get_current_account),
-        producer: aiokafka.Producer = Depends(get_producer)
+        producer: event_streaming.Producer = Depends(get_producer)
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
@@ -120,7 +120,7 @@ async def close_my_task(
         task_id: int,
         session: AsyncSession = Depends(get_session),
         account: Account = Depends(get_current_account),
-        producer: aiokafka.Producer = Depends(get_producer),
+        producer: event_streaming.Producer = Depends(get_producer),
 ):
     task_result = await session.execute(
         select(Task).where(
@@ -152,7 +152,7 @@ async def reopen_my_task(
         task_id: int,
         session: AsyncSession = Depends(get_session),
         account: Account = Depends(get_current_account),
-        producer: aiokafka.Producer = Depends(get_producer),
+        producer: event_streaming.Producer = Depends(get_producer),
 ):
     task_result = await session.execute(
         select(Task).where(
@@ -184,7 +184,7 @@ async def create_task(
         task_write: TaskWrite,
         session: AsyncSession = Depends(get_session),
         account: Account = Depends(get_current_account),
-        producer: aiokafka.Producer = Depends(get_producer),
+        producer: event_streaming.Producer = Depends(get_producer),
 ):
     workers: List[Account] = (await session.execute(
         select(Account).where(Account.role == AccountRole.worker)
@@ -227,7 +227,7 @@ async def create_task(
 async def shuffle_tasks(
         session: AsyncSession = Depends(get_session),
         account: Account = Depends(get_current_account),
-        producer: aiokafka.Producer = Depends(get_producer),
+        producer: event_streaming.Producer = Depends(get_producer),
 ):
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)

@@ -61,9 +61,9 @@ services:
       - '3000:3000'
 
   task-tracker-web:
+    image: task-tracker:last
     build:
       context: task-tracker
-      target: web-server
     container_name: task-tracker-web
     depends_on:
       - task-tracker-db
@@ -76,13 +76,13 @@ services:
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
     volumes:
       - ./task-tracker:/app
+      - ./common:/common
+    command: ["uvicorn", "task_tracker.web_server:app", "--host", "0.0.0.0", "--reload"]
     ports:
       - '3001:8000'
 
   task-tracker-event-consumer:
-    build:
-      context: task-tracker
-      target: event-consumer
+    image: task-tracker:last
     container_name: task-tracker-consumer
     depends_on:
       - task-tracker-db
@@ -92,6 +92,8 @@ services:
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
     volumes:
       - ./task-tracker:/app
+      - ./common:/common
+    command: ["python", "-m", "task_tracker.event_streaming"]
 
   task-tracker-db:
     image: postgres

@@ -2,14 +2,14 @@ import logging
 
 from sqlalchemy import select
 
+import event_streaming
 from task_tracker import database
-from task_tracker.event_streaming import consumer
 from task_tracker.models import Account, AccountRole
 
 logger = logging.getLogger(__name__)
 
 
-@consumer.event_handler('AccountCreated')
+@event_streaming.on_event('AccountCreated')
 async def on_account_created(event_data):
     logger.info('AccountCreated: %s', event_data)
     # public_id is NONE
@@ -19,7 +19,7 @@ async def on_account_created(event_data):
     #    await session.commit()
 
 
-@consumer.event_handler('AccountUpdated')
+@event_streaming.on_event('AccountUpdated')
 async def on_account_updated(event_data):
     logger.info('AccountUpdated: %s', event_data)
     async with database.create_session() as session:
@@ -37,7 +37,7 @@ async def on_account_updated(event_data):
         await session.commit()
 
 
-@consumer.event_handler('AccountRoleChanged')
+@event_streaming.on_event('AccountRoleChanged')
 async def on_account_role_changed(event_data):
     logger.info('AccountRoleChanged: %s', event_data)
     async with database.create_session() as session:
