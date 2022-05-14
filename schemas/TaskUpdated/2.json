@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-04/schema#",
 
-  "title": "Task.Created.v1",
-  "description": "json schema for CUD task events (version 1)",
+  "title": "Task.Updated.v2",
+  "description": "json schema for CUD task events (version 2)",
 
   "definitions": {
     "event_data": {
@@ -14,13 +14,17 @@
         "title": {
           "type": "string"
         },
+        "jira_id": {
+          "type": "string"
+        },
         "description": {
           "type": ["string"]
         }
       },
       "required": [
         "public_id",
-        "title"
+        "title",
+        "jira_id"
       ]
     }
   },
@@ -29,8 +33,8 @@
 
   "properties": {
     "event_id":      { "type": "string" },
-    "event_version": { "enum": [1] },
-    "event_name":    { "enum": ["TaskCreated"] },
+    "event_version": { "enum": [2] },
+    "event_name":    { "enum": ["TaskUpdated"] },
     "event_time":    { "type": "string" },
     "producer":      { "type": "string" },
 

@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 @event_streaming.on_event('AccountCreated')
 @event_streaming.on_event('AccountUpdated')
-async def on_account_updated(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
+async def on_account_updated(event_name: str, event_version: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     if not event_data.get('public_id'):
         logger.warning('Invalid data, public_id is required!')
@@ -29,7 +29,7 @@ async def on_account_updated(event_name: str, event_handler: int, event_data: Ma
 
 
 @event_streaming.on_event('AccountRoleChanged')
-async def on_account_role_changed(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
+async def on_account_role_changed(event_name: str, event_version: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     async with database.create_session() as session:
         public_id = event_data['public_id']
@@ -43,17 +43,22 @@ async def on_account_role_changed(event_name: str, event_handler: int, event_dat
 
 @event_streaming.on_event('TaskCreated')
 @event_streaming.on_event('TaskUpdated')
-async def on_task_updated(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
+async def on_task_updated(event_name: str, event_version: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     public_id = event_data['public_id']
     async with database.create_session() as session:
         task, _created = await get_or_create(session, Task, public_id=public_id)
-        task.description = f"{event_data['title']}\n{event_data['description']}"
+        if event_version == 1:  # Drop support for v1 after releasing of v2-producer
+            task.description = f"{event_data['title']}\n{event_data['description']}"
+        elif event_version == 2:
+            jira_id = event_data['jira_id']
+            jira_prefix = jira_id and f'[{jira_id}] '
+            task.description = f"{jira_prefix}{event_data['title']}\n{event_data['description']}"
         await session.commit()
 
 
 @event_streaming.on_event('TaskAdded')
-async def on_task_added(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
+async def on_task_added(event_name: str, event_version: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     public_id = event_data['task']
     await price_task(public_id)
@@ -61,7 +66,7 @@ async def on_task_added(event_name: str, event_handler: int, event_data: Mapping
 
 @event_streaming.on_event('TaskAssigned')
 @event_streaming.on_event('TaskClosed')
-async def on_task_assigned(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
+async def on_task_assigned(event_name: str, event_version: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     task = event_data['task']
     await price_task(task)  # if TaskAdded is haven't gotten yet

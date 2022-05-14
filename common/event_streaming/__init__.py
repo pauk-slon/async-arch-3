@@ -40,7 +40,7 @@ class Producer:
             'producer': self._name,
             'data': data,
         }
-        self._schema_registry.validate_event(event_name, 1, message)
+        self._schema_registry.validate_event(event_name, event_version, message)
         await self._producer.send_and_wait(topic_name, json.dumps(message).encode())
 
 
