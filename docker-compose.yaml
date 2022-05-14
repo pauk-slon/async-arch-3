@@ -89,9 +89,11 @@ services:
       AUTH_URL: http://localhost:3000
       AUTH_INTERNAL_URL: http://auth-web:3000
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
     volumes:
       - ./task-tracker:/app
       - ./common:/common
+      - ./schemas:/schemas
     command: ["uvicorn", "task_tracker.web_server:app", "--host", "0.0.0.0", "--reload"]
     ports:
       - '3001:8000'
@@ -107,9 +109,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
     volumes:
       - ./task-tracker:/app
       - ./common:/common
+      - ./schemas:/schemas
     command: ["python", "-m", "task_tracker.event_streaming"]
 
   task-tracker-db:
@@ -141,9 +145,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://accounting:accounting@accounting-db:5432/accounting
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
     volumes:
       - ./accounting:/app
       - ./common:/common
+      - ./schemas:/schemas
     command: ["python", "-m", "accounting.event_streaming"]
 
   accounting-db:

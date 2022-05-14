@@ -51,5 +51,6 @@ async def get_current_account(
     return account
 
 
+@cache
 def get_producer() -> event_streaming.Producer:
-    return event_streaming.producer
+    return event_streaming.Producer('task-tracker')

@@ -2,6 +2,7 @@ aiokafka
 asyncpg
 fastapi
 httpx
+jsonschema
 python-multipart
 sqlmodel
 uvicorn[standard]
