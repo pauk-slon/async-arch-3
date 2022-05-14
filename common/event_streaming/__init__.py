@@ -1,7 +1,6 @@
 from collections import defaultdict
 import datetime
 import json
-import itertools
 import uuid
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
