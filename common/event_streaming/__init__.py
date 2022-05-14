@@ -1,6 +1,7 @@
 from collections import defaultdict
 import datetime
 import json
+import itertools
 import uuid
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
@@ -31,12 +32,12 @@ class Producer:
     async def stop(self):
         await self._producer.stop()
 
-    async def send(self, topic_name: str, event_name: str, data: dict):
+    async def send(self, topic_name: str, event_name: str, event_version: int, data: dict):
         message = {
             'event_id': str(uuid.uuid4()),
             'event_name': event_name,
             'event_time': datetime.datetime.now().isoformat(),
-            'event_version': 1,
+            'event_version': event_version,
             'producer': self._name,
             'data': data,
         }
@@ -44,9 +45,9 @@ class Producer:
         await self._producer.send_and_wait(topic_name, json.dumps(message).encode())
 
 
-def on_event(event_name):
+def on_event(event_name: str, event_version: int | None = None):
     def decorator(handler):
-        on_event.registry[event_name].add(handler)
+        on_event.registry[event_name, event_version].add(handler)
         return handler
 
     return decorator
@@ -69,8 +70,9 @@ async def consume(settings: Settings, topics, group):
             message = json.loads(message.value)
             event_name = message['event_name']
             event_version = message.get('event_version', 1)
-            for handler in on_event.registry[event_name]:
+            handlers = on_event.registry[event_name, None] | on_event.registry[event_name, event_version]
+            for handler in handlers:
                 schema_registry.validate_event(event_name, event_version, message)
-                await handler(message['event_name'], message['data'])
+                await handler(message['event_name'], event_version, message['data'])
     finally:
         await consumer.stop()
