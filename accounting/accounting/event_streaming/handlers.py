@@ -5,7 +5,7 @@ import event_streaming
 from accounting import database
 from accounting.models import Account, AccountRole, Task
 from accounting.transactions.billing import initialize_account
-from accounting.transactions.tasks import price_task, charge_fee_for_task_assignment, assess_amount_for_task_completion
+from accounting.transactions.tasks import price_task, charge_fee_for_task_assignment, assess_amount_for_task_closing
 from accounting.transactions.utils import get_or_create
 
 logger = logging.getLogger(__name__)
@@ -75,4 +75,4 @@ async def on_task_assigned(event_name: str, event_version: int, event_data: Mapp
     if event_name == 'TaskAssigned':
         await charge_fee_for_task_assignment(task, account)
     elif event_name == 'TaskClosed':
-        await assess_amount_for_task_completion(task, account)
+        await assess_amount_for_task_closing(task, account)
