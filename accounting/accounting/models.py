@@ -50,16 +50,16 @@ class BillingCycleStatus(enum.Enum):
 
 
 class BillingCycle(SQLModel, table=True):
-    __table_args__ = (
-        UniqueConstraint('business_day', 'account_id', name='unique_business_day_account'),
-    )
     __tablename__ = 'billing_cycle'
     id: int | None = Field(primary_key=True)
     status = Field(default=BillingCycleStatus.open, sa_column=Column('status', Enum(BillingCycleStatus)))
-    business_day: datetime.date = Field(default_factory=datetime.date.today)
     account_id: int = Field(foreign_key='account.id')
     opened_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
     closed_at: datetime.datetime | None
+
+    def close(self):
+        self.status = BillingCycleStatus.closed
+        self.closed_at = datetime.datetime.now()
 
 
 class Transaction(SQLModel, table=True):
