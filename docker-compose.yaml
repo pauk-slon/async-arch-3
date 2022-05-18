@@ -133,9 +133,33 @@ services:
       interval: 10s
       retries: 10
 
-  accounting-event-consumer:
+  accounting-web:
     image: accounting:last
     build: accounting
+    container_name: accounting-web
+    environment:
+      AUTH_OAUTH_CLIENT_ID: VzgL5jPx9_ZuaYNXTvj8yHjdf00e6ESLjMs5XsWOnjI
+      AUTH_OAUTH_CLIENT_SECRET: UBOaF8YpjdPKnsHQAxFRKFU2mtX8-TxzMiiTc0QQxgM
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+      DATABASE_URL: postgresql+asyncpg://accounting:accounting@accounting-db:5432/accounting
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    depends_on:
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: [ "uvicorn", "accounting.web_server.main:app", "--host", "0.0.0.0", "--reload" ]
+    ports:
+      - '3004:8000'
+    volumes:
+      - ./accounting:/app
+      - ./common:/common
+      - ./schemas:/schemas
+
+  accounting-event-consumer:
+    image: accounting:last
     container_name: accounting-consumer
     depends_on:
       accounting-db:
