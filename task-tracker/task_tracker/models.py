@@ -31,6 +31,7 @@ class Task(SQLModel, table=True):
     public_id: str = Field(default_factory=lambda: str(uuid.uuid4()), sa_column_kwargs={'unique': True})
     status: TaskStatus = Field(default=TaskStatus.open, sa_column=Column('status', Enum(TaskStatus)))
     title: str = Field(max_length=50, sa_column_kwargs={'unique': True})
+    jira_id: str | None = Field(description='Jira ID', sa_column_kwargs={'unique': True}, nullable=True)
     description: str = Field(default='')
     reporter_id: int = Field(foreign_key='account.id')
     reporter: Account = Relationship(back_populates='reported_tasks')

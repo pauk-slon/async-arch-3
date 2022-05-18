@@ -3,7 +3,7 @@ from fastapi import FastAPI, Form, HTTPException, Depends
 import event_streaming
 from task_tracker import auth
 from task_tracker import database
-from task_tracker.web_server.dependences import get_auth_client
+from task_tracker.web_server.dependences import get_auth_client, get_producer
 from task_tracker.web_server.endpoints import accounts
 from task_tracker.web_server.endpoints import tasks
 
@@ -26,12 +26,12 @@ app.include_router(tasks.router)
 @app.on_event('startup')
 async def on_startup():
     await database.setup(database.Settings())
-    await event_streaming.producer.start(event_streaming.Settings())
+    await get_producer().start(event_streaming.Settings())
 
 
 @app.on_event('shutdown')
 async def on_shutdown():
-    await event_streaming.producer.stop()
+    await get_producer().stop()
 
 
 @app.post('/oauth/token', include_in_schema=False)

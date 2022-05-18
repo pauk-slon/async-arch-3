@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 @event_streaming.on_event('AccountCreated')
 @event_streaming.on_event('AccountUpdated')
-async def on_account_updated(event_name: str, event_data: Mapping[str, Any]):
+async def on_account_updated(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     if not event_data.get('public_id'):
         logger.warning('Invalid data, public_id is required!')
@@ -33,7 +33,7 @@ async def on_account_updated(event_name: str, event_data: Mapping[str, Any]):
 
 
 @event_streaming.on_event('AccountRoleChanged')
-async def on_account_role_changed(event_name: str, event_data: Mapping[str, Any]):
+async def on_account_role_changed(event_name: str, event_handler: int, event_data: Mapping[str, Any]):
     logger.info('%s: %s', event_name, event_data)
     async with database.create_session() as session:
         query_result = await session.execute(

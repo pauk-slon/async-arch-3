@@ -1,8 +1,9 @@
 import random
+import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, validator
 from starlette import status as statuses
 from sqlalchemy import select, asc
 from sqlalchemy.exc import NoResultFound
@@ -19,12 +20,21 @@ router = APIRouter(
 )
 task_lifecycle_topic = 'task-lifecycle'
 task_stream_topic = 'task-stream'
-task_stream_fields = {'public_id', 'title', 'description'}
+task_stream_fields = {'public_id', 'title', 'description', 'jira_id'}
 
 
 class TaskWrite(BaseModel):
+    _jira_id_entry_regex = re.compile(r'\[[A-Z]+-\d+\]')
+
     title: constr(max_length=50, strip_whitespace=True)
+    jira_id: constr(max_length=10, strip_whitespace=True, regex=r'^[A-Z]+-\d+$')
     description: str
+
+    @validator('title')
+    def title_must_not_contain_jira_id(cls, value):
+        if cls._jira_id_entry_regex.search(value):
+            raise ValueError('Title must not contain Jira ID.')
+        return value
 
 
 @router.get('/', response_model=List[Task])
@@ -79,7 +89,7 @@ async def update_task(
     await session.refresh(task)
     await producer.send(
         task_stream_topic,
-        'TaskUpdated',
+        'TaskUpdated', 2,
         task.dict(include=task_stream_fields),
     )
     return task
@@ -141,7 +151,7 @@ async def close_my_task(
     assignee = await session.get(Account, task.assignee_id)
     await producer.send(
         task_lifecycle_topic,
-        'TaskClosed',
+        'TaskClosed', 1,
         {'task': task.public_id, 'assignee': assignee.public_id},
     )
     return task
@@ -173,7 +183,7 @@ async def reopen_my_task(
     assignee = await session.get(Account, task.assignee_id)
     await producer.send(
         task_lifecycle_topic,
-        'TaskAssigned',
+        'TaskAssigned', 1,
         {'task': task.public_id, 'assignee': assignee.public_id},
     )
     return task
@@ -207,17 +217,17 @@ async def create_task(
     await session.refresh(assignee)
     await producer.send(
         task_stream_topic,
-        'TaskCreated',
+        'TaskCreated', 2,
         task.dict(include=task_stream_fields),
     )
     await producer.send(
         task_lifecycle_topic,
-        'TaskAdded',
+        'TaskAdded', 1,
         {'task': task.public_id},
     )
     await producer.send(
         task_lifecycle_topic,
-        'TaskAssigned',
+        'TaskAssigned', 1,
         {'task': task.public_id, 'assignee': assignee.public_id},
     )
     return task
@@ -249,5 +259,5 @@ async def shuffle_tasks(
         task.assign(new_assignee)
         session.add(task)
     for result_item in result:
-        await producer.send(task_lifecycle_topic, 'TaskAssigned', result_item)
+        await producer.send(task_lifecycle_topic, 'TaskAssigned', 1, result_item)
     await session.commit()

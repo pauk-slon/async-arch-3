@@ -89,9 +89,11 @@ services:
       AUTH_URL: http://localhost:3000
       AUTH_INTERNAL_URL: http://auth-web:3000
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
     volumes:
       - ./task-tracker:/app
       - ./common:/common
+      - ./schemas:/schemas
     command: ["uvicorn", "task_tracker.web_server:app", "--host", "0.0.0.0", "--reload"]
     ports:
       - '3001:8000'
@@ -107,9 +109,11 @@ services:
     environment:
       DATABASE_URL: postgresql+asyncpg://tasktracker:tasktracker@task-tracker-db:5432/tasktracker
       EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
     volumes:
       - ./task-tracker:/app
       - ./common:/common
+      - ./schemas:/schemas
     command: ["python", "-m", "task_tracker.event_streaming"]
 
   task-tracker-db:
@@ -125,6 +129,42 @@ services:
       - '3002:5432'
     healthcheck:
       test: ["CMD", "pg_isready", "-q", "-U", "tasktracker"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
+  accounting-event-consumer:
+    image: accounting:last
+    build: accounting
+    container_name: accounting-consumer
+    depends_on:
+      accounting-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://accounting:accounting@accounting-db:5432/accounting
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    volumes:
+      - ./accounting:/app
+      - ./common:/common
+      - ./schemas:/schemas
+    command: ["python", "-m", "accounting.event_streaming"]
+
+  accounting-db:
+    image: postgres
+    container_name: accounting-db
+    volumes:
+      - .local/accounting-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: accounting
+      POSTGRES_USER: accounting
+      POSTGRES_PASSWORD: accounting
+    ports:
+      - '3003:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "accounting"]
       timeout: 45s
       interval: 10s
       retries: 10
