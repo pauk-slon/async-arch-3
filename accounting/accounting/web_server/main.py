@@ -6,7 +6,7 @@ import auth
 import event_streaming
 from accounting import database
 from accounting.web_server.dependences import get_auth_client, get_producer
-from accounting.web_server.endpoints import accounts, transactions
+from accounting.web_server.endpoints import accounts, transactions, daily_profit
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,6 +25,7 @@ app = FastAPI(
 
 app.include_router(accounts.router)
 app.include_router(transactions.router)
+app.include_router(daily_profit.router)
 
 
 @app.on_event('startup')
