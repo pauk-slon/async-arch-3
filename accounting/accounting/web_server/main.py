@@ -1,10 +1,14 @@
+import logging
+
 from fastapi import FastAPI, Form, HTTPException, Depends
 
 import auth
 import event_streaming
 from accounting import database
 from accounting.web_server.dependences import get_auth_client, get_producer
-from accounting.web_server.endpoints import accounts
+from accounting.web_server.endpoints import accounts, transactions
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
     title="Accounting",
@@ -20,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(accounts.router)
+app.include_router(transactions.router)
 
 
 @app.on_event('startup')
