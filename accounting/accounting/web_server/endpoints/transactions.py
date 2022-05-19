@@ -3,7 +3,7 @@ import enum
 import logging
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from starlette import status as statuses
 from sqlalchemy import asc, func, select
@@ -46,6 +46,13 @@ class Transaction(BaseModel):
     type: TransactionType | None
     amount: int
     details: PaymentDetails | TaskAssignmentDetails | TaskClosingDetails | None
+
+
+class Balance(BaseModel):
+    business_day: datetime.date
+    opening: int
+    current: int
+    transactions: List[Transaction]
 
 
 async def _fetch_transactions(
@@ -150,3 +157,27 @@ async def list_my_transactions(
     if account.role not in {models.AccountRole.manager, models.AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
     return await _fetch_transactions(session, business_day_from, business_day_till, account.id)
+
+
+@router.get('/my/balance', response_model=Balance)
+async def get_my_balance(
+    session: AsyncSession = Depends(get_session),
+    account: models.Account = Depends(get_current_account),
+):
+    business_day_opening_datetime: datetime.datetime | None = (await session.execute(
+        select(func.max(models.BillingCycle.opened_at)).where(
+            models.BillingCycle.status == models.BillingCycleStatus.open,
+            models.BillingCycle.account_id == account.id,
+        )
+    )).scalar()
+    if not business_day_opening_datetime:
+        raise HTTPException(statuses.HTTP_400_BAD_REQUEST, detail="No open billing cycle found.")
+    business_day = business_day_opening_datetime.date()
+    transactions = await _fetch_transactions(session, business_day, business_day, account.id)
+    delta = sum(transaction.amount for transaction in transactions)
+    return Balance(
+        business_day=business_day,
+        opening=account.balance,
+        current=account.balance + delta,
+        transactions=transactions,
+    )
