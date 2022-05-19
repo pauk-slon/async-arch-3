@@ -77,14 +77,15 @@ async def _fetch_transactions(
         models.Task,
         (models.Task.id == models.TaskAssignment.task_id)
         | (models.Task.id == models.TaskClosing.task_id),
-    ).where(
-        func.DATE(models.BillingCycle.opened_at) >= business_day_from,
-        func.DATE(models.BillingCycle.opened_at) <= business_day_till,
     ).order_by(
         asc(models.Transaction.id),
     )
     if account_id:
         query = query.where(models.BillingCycle.account_id == account_id)
+    if business_day_from:
+        query = query.where(func.DATE(models.BillingCycle.opened_at) >= business_day_from)
+    if business_day_till:
+        query = query.where(func.DATE(models.BillingCycle.opened_at) >= business_day_till)
     result = await session.execute(query)
     transactions: List[Transaction] = []
     transaction: models.Transaction
@@ -128,25 +129,24 @@ async def _fetch_transactions(
 
 @router.get('/', response_model=List[Transaction])
 async def list_transactions(
-    business_day_from: datetime.date | None = Query(None, title='From date', description='Today if empty.'),
-    business_day_till: datetime.date | None = Query(None, title='Till date', description='Today if empty.'),
+    business_day_from: datetime.date | None = None,
+    business_day_till: datetime.date | None = None,
     account_id: int | None = None,
     session: AsyncSession = Depends(get_session),
     account: models.Account = Depends(get_current_account),
 ):
     if account.role not in {models.AccountRole.manager, models.AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
-    today = datetime.date.today()
-    return await _fetch_transactions(session, business_day_from or today, business_day_till or today, account_id)
+    return await _fetch_transactions(session, business_day_from, business_day_till, account_id)
 
 
 @router.get('/my/', response_model=List[Transaction])
 async def list_my_transactions(
-    business_day_from: datetime.date | None = Query(None, title='From date', description='Today if empty.'),
-    business_day_till: datetime.date | None = Query(None, title='Till date', description='Today if empty.'),
+    business_day_from: datetime.date | None = None,
+    business_day_till: datetime.date | None = None,
     session: AsyncSession = Depends(get_session),
     account: models.Account = Depends(get_current_account),
 ):
     if account.role not in {models.AccountRole.manager, models.AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
-    return await _fetch_transactions(session, business_day_from or today, business_day_till or today, account_id)
+    return await _fetch_transactions(session, business_day_from, business_day_till, account.id)
