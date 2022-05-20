@@ -228,3 +228,27 @@ services:
       - ./common:/common
       - ./schemas:/schemas
     command: ["python", "-m", "analytics.event_consuming"]
+
+  analytics-web:
+    image: analytics:last
+    container_name: analytics-web
+    environment:
+      AUTH_OAUTH_CLIENT_ID: JgizKBjJFcNlKn7yQqHYg5iQ6aiSqV0g0XlbgQa29V4
+      AUTH_OAUTH_CLIENT_SECRET: q9-NuulvvwHEOFAxZ6ReXiHR-9gunulMo0OGgm_l04Y
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+      DATABASE_URL: postgresql+asyncpg://analytics:analytics@analytics-db:5432/analytics
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    depends_on:
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: [ "uvicorn", "analytics.web_server.main:app", "--host", "0.0.0.0", "--reload" ]
+    ports:
+      - '3006:8000'
+    volumes:
+      - ./analytics:/app
+      - ./common:/common
+      - ./schemas:/schemas
