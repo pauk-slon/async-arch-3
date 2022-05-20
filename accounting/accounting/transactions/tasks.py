@@ -4,7 +4,10 @@ from typing import AsyncContextManager, Tuple
 from sqlalchemy import select
 
 from accounting import database
-from accounting.event_producing import emit_event_task_transaction_completed_v1
+from accounting.event_producing import (
+    emit_task_price_created_v1,
+    emit_task_transaction_completed_v1,
+)
 from accounting.models import TaskAssignment, Task, TaskClosing, BillingTransaction
 from accounting.transactions.billing import billing_transaction, BillingTransactionContext
 from accounting.transactions.utils import get_or_create
@@ -12,9 +15,15 @@ from accounting.transactions.utils import get_or_create
 
 async def price_task(task_public_id: str):
     async with database.create_session() as session:
-        task, _created = await get_or_create(session, Task, public_id=task_public_id)
-        task.price()
-        await session.commit()
+        task, is_task_created = await get_or_create(session, Task, public_id=task_public_id)
+        is_task_price_created = None
+        if task.is_not_priced:
+            task.price()
+            is_task_price_created = True
+        if is_task_created or is_task_price_created:
+            await session.commit()
+    if is_task_price_created:
+        await emit_task_price_created_v1(task)
 
 
 @asynccontextmanager
@@ -34,7 +43,7 @@ async def _emit_event_task_transaction_completed(
         transaction_type: str,
         task: Task
 ):
-    await emit_event_task_transaction_completed_v1(
+    await emit_task_transaction_completed_v1(
         billing_context.account,
         billing_context.billing_cycle.business_day,
         transaction,

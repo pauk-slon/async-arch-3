@@ -210,6 +210,7 @@ async def create_task(
         description=task_write.description,
         reporter_id=account.id,
         assignee_id=assignee.id,
+        jira_id=task_write.jira_id,
     )
     session.add(task)
     await session.commit()

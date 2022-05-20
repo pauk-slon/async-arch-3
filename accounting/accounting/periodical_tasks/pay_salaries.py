@@ -51,7 +51,7 @@ async def main():
             payment.status = PaymentStatus.completed
             session.add(payment)
             await session.commit()
-        await event_producing.emit_event_task_transaction_completed_v1(
+        await event_producing.emit_task_transaction_completed_v1(
             account,
             billing_cycle.business_day,
             transaction,
