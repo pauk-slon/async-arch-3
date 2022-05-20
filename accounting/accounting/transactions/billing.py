@@ -4,9 +4,9 @@ from typing import AsyncContextManager, Iterable
 
 from sqlalchemy import select
 
-from accounting import database
+import database
 from accounting.models import Account, BillingCycle, BillingCycleStatus, BillingTransaction, Payment
-from accounting.transactions.utils import get_or_create
+from db_utils import get_or_create
 
 
 async def initialize_account(account_public_id: str):

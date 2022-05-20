@@ -5,7 +5,7 @@ from accounting.models import Account, BillingTransaction, Task
 import event_streaming
 
 billing_transactions_topic = 'billing-transactions'
-task_price_streaming_topic = 'task-price-streaming'
+task_price_streaming_topic = 'task-price-stream'
 
 producer = event_streaming.Producer('accounting')
 

@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import auth
+import database
 import event_streaming
-from task_tracker import database
 from task_tracker.models import Account
 
 

@@ -3,7 +3,7 @@ import logging
 
 from sqlalchemy import select
 
-from accounting import database
+import database
 from accounting import event_producing
 from accounting.models import Account, Payment, PaymentStatus, BillingTransaction, BillingCycle
 import event_streaming

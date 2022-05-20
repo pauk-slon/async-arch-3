@@ -1,8 +1,8 @@
 import asyncio
 import logging
 
+import database
 import event_streaming
-from accounting import database
 from accounting import event_producing
 import accounting.event_consuming.handlers  # noqa
 

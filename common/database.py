@@ -14,12 +14,11 @@ class Settings(BaseSettings):
 
 
 def create_session() -> AsyncSession:
-    return sessionmaker(engine, AsyncSession)()
+    return sessionmaker(engine, AsyncSession, expire_on_commit=False)()
 
 
 async def setup(settings: Settings):
     global engine
-    engine = create_async_engine(settings.url, echo=True)
-    from task_tracker import models  # noqa
+    engine = create_async_engine(settings.url)
     async with engine.begin() as connection:
         await connection.run_sync(SQLModel.metadata.create_all)

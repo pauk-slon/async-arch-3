@@ -3,8 +3,8 @@ from typing import Any, Mapping
 
 from sqlalchemy import select
 
+import database
 import event_streaming
-from task_tracker import database
 from task_tracker.models import Account, AccountRole
 
 logger = logging.getLogger(__name__)

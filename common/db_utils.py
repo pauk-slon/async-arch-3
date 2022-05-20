@@ -1,8 +1,8 @@
-from typing import Any, Mapping, Type, TypeVar
+from typing import Any, Mapping, Tuple, Type, TypeVar
 
 from sqlalchemy import select
 
-from accounting.models import SQLModel
+from sqlmodel import SQLModel
 
 ModelT = TypeVar('ModelT', bound=SQLModel)
 
@@ -12,7 +12,7 @@ async def get_or_create(
     model: Type[ModelT],
     defaults: Mapping[str, Any] | None = None,
     **filter_kwargs: Any,
-) -> (ModelT, bool):
+) -> Tuple[ModelT, bool]:
     query_result = await session.execute(select(model).filter_by(**filter_kwargs))
     instance: model | None = query_result.scalar_one_or_none()
     created = False

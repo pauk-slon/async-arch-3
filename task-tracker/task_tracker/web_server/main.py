@@ -1,8 +1,8 @@
 from fastapi import FastAPI, Form, HTTPException, Depends
 
 import auth
+import database
 import event_streaming
-from task_tracker import database
 from task_tracker.web_server.dependences import get_auth_client, get_producer
 from task_tracker.web_server.endpoints import accounts
 from task_tracker.web_server.endpoints import tasks

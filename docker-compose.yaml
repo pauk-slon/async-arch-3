@@ -192,3 +192,39 @@ services:
       timeout: 45s
       interval: 10s
       retries: 10
+
+  analytics-db:
+    image: postgres
+    container_name: analytics-db
+    volumes:
+      - .local/analytics-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+    ports:
+      - '3005:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "analytics"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
+  analytics-event-consumer:
+    image: analytics:last
+    build: analytics
+    container_name: analytics-consumer
+    depends_on:
+      analytics-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://analytics:analytics@analytics-db:5432/analytics
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    volumes:
+      - ./analytics:/app
+      - ./common:/common
+      - ./schemas:/schemas
+    command: ["python", "-m", "analytics.event_consuming"]

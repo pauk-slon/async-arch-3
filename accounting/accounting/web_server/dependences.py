@@ -7,8 +7,8 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import auth
+import database
 from event_streaming import Producer
-from accounting import database
 from accounting.event_producing import producer
 from accounting.models import Account
 

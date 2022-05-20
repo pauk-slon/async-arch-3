@@ -3,14 +3,14 @@ from typing import AsyncContextManager, Tuple
 
 from sqlalchemy import select
 
-from accounting import database
+import database
 from accounting.event_producing import (
     emit_task_price_created_v1,
     emit_task_transaction_completed_v1,
 )
 from accounting.models import TaskAssignment, Task, TaskClosing, BillingTransaction
 from accounting.transactions.billing import billing_transaction, BillingTransactionContext
-from accounting.transactions.utils import get_or_create
+from db_utils import get_or_create
 
 
 async def price_task(task_public_id: str):

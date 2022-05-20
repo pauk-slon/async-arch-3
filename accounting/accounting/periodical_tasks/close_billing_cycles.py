@@ -3,7 +3,7 @@ import logging
 
 from sqlalchemy import select
 
-from accounting import database
+import database
 from accounting.models import Account
 from accounting.transactions.billing import close_current_billing_cycle
 
