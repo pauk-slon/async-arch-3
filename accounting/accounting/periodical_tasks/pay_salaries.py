@@ -4,7 +4,9 @@ import logging
 from sqlalchemy import select
 
 from accounting import database
+from accounting import event_producing
 from accounting.models import Account, Payment, PaymentStatus, BillingTransaction, BillingCycle
+import event_streaming
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -12,6 +14,8 @@ logging.basicConfig(level=logging.INFO)
 
 async def main():
     await database.setup(database.Settings())
+    event_streaming_settings = event_streaming.Settings()
+    await event_producing.producer.start(event_streaming_settings)
     async with database.create_session() as session:
         pending_payment_ids = (await session.execute(
             select(Payment.id).where(Payment.status == PaymentStatus.pending)
@@ -37,16 +41,23 @@ async def main():
                     of=Payment,
                 )
             )).one()
-        logger.info(
-            'Pay %s$ to %s for %s - %s',
-            (transaction.credit - transaction.debit) / 100,
-            account.full_name,
-            billing_cycle.opened_at,
-            billing_cycle.closed_at,
+            logger.info(
+                'Pay %s$ to %s for %s - %s',
+                (transaction.credit - transaction.debit) / 100,
+                account.full_name,
+                billing_cycle.opened_at,
+                billing_cycle.closed_at,
+            )
+            payment.status = PaymentStatus.completed
+            session.add(payment)
+            await session.commit()
+        await event_producing.emit_event_task_transaction_completed_v1(
+            account,
+            billing_cycle.business_day,
+            transaction,
+            {'type': 'payment'},
         )
-        payment.status = PaymentStatus.completed
-        session.add(payment)
-        await session.commit()
+    await event_producing.producer.stop()
 
 
 if __name__ == '__main__':

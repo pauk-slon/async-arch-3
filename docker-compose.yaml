@@ -174,7 +174,7 @@ services:
       - ./accounting:/app
       - ./common:/common
       - ./schemas:/schemas
-    command: ["python", "-m", "accounting.event_streaming"]
+    command: ["python", "-m", "accounting.event_consuming"]
 
   accounting-db:
     image: postgres

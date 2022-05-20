@@ -62,6 +62,10 @@ class BillingCycle(SQLModel, table=True):
         self.status = BillingCycleStatus.closed
         self.closed_at = datetime.datetime.now()
 
+    @property
+    def business_day(self) -> datetime.date:
+        return self.opened_at.date()
+
 
 class BillingTransaction(SQLModel, table=True):
     __tablename__ = 'billing_transaction'

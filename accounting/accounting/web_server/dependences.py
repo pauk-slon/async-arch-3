@@ -7,8 +7,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import auth
-import event_streaming
+from event_streaming import Producer
 from accounting import database
+from accounting.event_producing import producer
 from accounting.models import Account
 
 
@@ -52,5 +53,5 @@ async def get_current_account(
 
 
 @cache
-def get_producer() -> event_streaming.Producer:
-    return event_streaming.Producer('accounting')
+def get_producer() -> Producer:
+    return producer
