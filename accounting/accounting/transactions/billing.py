@@ -5,7 +5,7 @@ from typing import AsyncContextManager, Iterable
 from sqlalchemy import select
 
 from accounting import database
-from accounting.models import Account, BillingCycle, BillingCycleStatus, Transaction, Payment
+from accounting.models import Account, BillingCycle, BillingCycleStatus, BillingTransaction, Payment
 from accounting.transactions.utils import get_or_create
 
 
@@ -29,8 +29,8 @@ class BillingTransactionContext:
     account: Account
     billing_cycle: BillingCycle
 
-    async def create_transaction(self, debit: int, credit: int) -> Transaction:
-        transaction = Transaction(
+    async def create_transaction(self, debit: int, credit: int) -> BillingTransaction:
+        transaction = BillingTransaction(
             billing_cycle_id=self.billing_cycle.id,
             debit=debit,
             credit=credit,
@@ -60,10 +60,10 @@ async def close_current_billing_cycle(account_public_id: str):
     async with billing_transaction(account_public_id) as billing_context:
         billing_context.billing_cycle.close()
         billing_context.session.add(BillingCycle(account_id=billing_context.account.id))
-        billing_cycle_transactions: Iterable[Transaction] = (
+        billing_cycle_transactions: Iterable[BillingTransaction] = (
             await billing_context.session.execute(
-                select(Transaction).where(
-                    Transaction.billing_cycle_id == billing_context.billing_cycle.id,
+                select(BillingTransaction).where(
+                    BillingTransaction.billing_cycle_id == billing_context.billing_cycle.id,
                 )
             )
         ).scalars().all()
@@ -75,6 +75,6 @@ async def close_current_billing_cycle(account_public_id: str):
         billing_context.account.balance += billing_cycle_delta
         if billing_context.account.balance > 0:
             payment_transaction = await billing_context.create_transaction(0, billing_context.account.balance)
-            billing_context.session.add(Payment(transaction_id=payment_transaction.id))
+            billing_context.session.add(Payment(billing_transaction_id=payment_transaction.id))
             billing_context.account.balance = 0
         await billing_context.session.commit()

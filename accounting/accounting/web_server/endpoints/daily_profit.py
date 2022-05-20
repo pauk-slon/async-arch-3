@@ -8,7 +8,7 @@ from starlette import status as statuses
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from accounting.models import Account, AccountRole, BillingCycle, TaskAssignment, TaskClosing, Transaction
+from accounting.models import Account, AccountRole, BillingCycle, TaskAssignment, TaskClosing, BillingTransaction
 from accounting.web_server.dependences import get_session, get_current_account
 
 logger = logging.getLogger(__name__)
@@ -34,18 +34,18 @@ async def list_profit_by_business_day(
     if account.role not in {AccountRole.manager, AccountRole.admin}:
         raise HTTPException(statuses.HTTP_403_FORBIDDEN)
     profit_by_business_day_query = select(
-        func.sum(Transaction.debit),
-        func.sum(Transaction.credit),
+        func.sum(BillingTransaction.debit),
+        func.sum(BillingTransaction.credit),
         func.date(BillingCycle.opened_at),
     ).join(
         BillingCycle,
-        BillingCycle.id == Transaction.billing_cycle_id,
+        BillingCycle.id == BillingTransaction.billing_cycle_id,
     ).outerjoin(
         TaskAssignment,
-        TaskAssignment.transaction_id == Transaction.id,
+        TaskAssignment.billing_transaction_id == BillingTransaction.id,
     ).outerjoin(
         TaskClosing,
-        TaskClosing.transaction_id == Transaction.id,
+        TaskClosing.billing_transaction_id == BillingTransaction.id,
     ).where(
         func.date(BillingCycle.opened_at) >= business_day_from,
         func.date(BillingCycle.opened_at) <= business_day_till,

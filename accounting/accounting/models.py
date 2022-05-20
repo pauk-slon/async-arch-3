@@ -1,8 +1,9 @@
 import enum
 import datetime
 import random
+import uuid
 
-from sqlmodel import Field, Column, SQLModel, Enum, UniqueConstraint
+from sqlmodel import Field, Column, SQLModel, Enum
 
 
 class AccountRole(enum.Enum):
@@ -62,8 +63,10 @@ class BillingCycle(SQLModel, table=True):
         self.closed_at = datetime.datetime.now()
 
 
-class Transaction(SQLModel, table=True):
+class BillingTransaction(SQLModel, table=True):
+    __tablename__ = 'billing_transaction'
     id: int | None = Field(primary_key=True)
+    public_id: str = Field(default_factory=lambda: str(uuid.uuid4()), sa_column_kwargs={'unique': True})
     date: datetime.datetime = Field(default_factory=datetime.datetime.now)
     billing_cycle_id: int = Field(foreign_key='billing_cycle.id')
     debit: int
@@ -73,14 +76,14 @@ class Transaction(SQLModel, table=True):
 class TaskAssignment(SQLModel, table=True):
     __tablename__ = 'task_assignment'
     id: int | None = Field(primary_key=True)
-    transaction_id: int = Field(foreign_key='transaction.id')
+    billing_transaction_id: int = Field(foreign_key='billing_transaction.id')
     task_id: int = Field(foreign_key='task.id')
 
 
 class TaskClosing(SQLModel, table=True):
     __tablename__ = 'task_closing'
     id: int | None = Field(primary_key=True)
-    transaction_id: int = Field(foreign_key='transaction.id')
+    billing_transaction_id: int = Field(foreign_key='billing_transaction.id')
     task_id: int = Field(foreign_key='task.id')
 
 
@@ -92,5 +95,5 @@ class PaymentStatus(enum.Enum):
 
 class Payment(SQLModel, table=True):
     id: int | None = Field(primary_key=True)
-    transaction_id: int = Field(foreign_key='transaction.id')
+    billing_transaction_id: int = Field(foreign_key='billing_transaction.id')
     status: PaymentStatus = Field(default=PaymentStatus.pending, sa_column=Column('status', Enum(PaymentStatus)))

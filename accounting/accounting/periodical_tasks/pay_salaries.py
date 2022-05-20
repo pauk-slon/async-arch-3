@@ -4,7 +4,7 @@ import logging
 from sqlalchemy import select
 
 from accounting import database
-from accounting.models import Account, Payment, PaymentStatus, Transaction, BillingCycle
+from accounting.models import Account, Payment, PaymentStatus, BillingTransaction, BillingCycle
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -21,13 +21,13 @@ async def main():
             payment, transaction, billing_cycle, account = (await session.execute(
                 select(
                     Payment,
-                    Transaction,
+                    BillingTransaction,
                     BillingCycle,
                     Account,
                 ).join(
-                    Transaction, onclause=Transaction.id == Payment.transaction_id,
+                    BillingTransaction, onclause=BillingTransaction.id == Payment.billing_transaction_id,
                 ).join(
-                    BillingCycle, onclause=BillingCycle.id == Transaction.billing_cycle_id,
+                    BillingCycle, onclause=BillingCycle.id == BillingTransaction.billing_cycle_id,
                 ).join(
                     Account, onclause=Account.id == BillingCycle.account_id,
                 ).where(

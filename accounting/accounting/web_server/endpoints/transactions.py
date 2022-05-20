@@ -62,7 +62,7 @@ async def _fetch_transactions(
     account_id: int | None = None,
 ) -> List[Transaction]:
     query = select(
-        models.Transaction,
+        models.BillingTransaction,
         models.BillingCycle,
         models.TaskAssignment,
         models.TaskClosing,
@@ -70,22 +70,22 @@ async def _fetch_transactions(
         models.Task,
     ).outerjoin(
         models.TaskAssignment,
-        models.TaskAssignment.transaction_id == models.Transaction.id,
+        models.TaskAssignment.billing_transaction_id == models.BillingTransaction.id,
     ).outerjoin(
         models.TaskClosing,
-        models.TaskClosing.transaction_id == models.Transaction.id,
+        models.TaskClosing.billing_transaction_id == models.BillingTransaction.id,
     ).outerjoin(
         models.Payment,
-        models.Payment.transaction_id == models.Transaction.id,
+        models.Payment.billing_transaction_id == models.BillingTransaction.id,
     ).join(
         models.BillingCycle,
-        models.Transaction.billing_cycle_id == models.BillingCycle.id,
+        models.BillingTransaction.billing_cycle_id == models.BillingCycle.id,
     ).outerjoin(
         models.Task,
         (models.Task.id == models.TaskAssignment.task_id)
         | (models.Task.id == models.TaskClosing.task_id),
     ).order_by(
-        asc(models.Transaction.id),
+        asc(models.BillingTransaction.id),
     )
     if account_id:
         query = query.where(models.BillingCycle.account_id == account_id)
@@ -95,7 +95,7 @@ async def _fetch_transactions(
         query = query.where(func.DATE(models.BillingCycle.opened_at) >= business_day_till)
     result = await session.execute(query)
     transactions: List[Transaction] = []
-    transaction: models.Transaction
+    transaction: models.BillingTransaction
     billing_cycle: models.BillingCycle
     task_assignment: models.TaskAssignment | None
     task_closing: models.TaskClosing | None
