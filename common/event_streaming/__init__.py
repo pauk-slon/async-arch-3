@@ -1,12 +1,15 @@
 from collections import defaultdict
 import datetime
 import json
+import logging
 import uuid
 
 from aiokafka import AIOKafkaConsumer, AIOKafkaProducer
 from pydantic import BaseSettings
 
 from event_streaming.schema_registry import SchemaRegistry
+
+logger = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -72,6 +75,8 @@ async def consume(settings: Settings, topics, group):
             handlers = on_event.registry[event_name, None] | on_event.registry[event_name, event_version]
             for handler in handlers:
                 schema_registry.validate_event(event_name, event_version, message)
-                await handler(message['event_name'], event_version, message['data'])
+                event_data = message['data']
+                logger.info('%s.v%s -> %s: %s', event_name, event_version, handler, event_data)
+                await handler(event_name, event_version, event_data)
     finally:
         await consumer.stop()

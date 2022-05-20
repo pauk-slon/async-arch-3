@@ -5,7 +5,7 @@ import database
 import event_streaming
 import analytics.event_consuming.handlers  # noqa
 
-topics = 'accounts-stream', 'accounts',  # 'task-stream', 'task-price-stream', 'billing-transactions'
+topics = 'accounts-stream', 'accounts',  'task-stream', 'task-price-stream', 'billing-transactions'
 group = 'analytics'
 
 logging.basicConfig(level=logging.INFO)
