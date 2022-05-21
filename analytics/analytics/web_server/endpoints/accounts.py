@@ -1,11 +1,11 @@
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from starlette import status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from analytics.models import Account, AccountRole
+from analytics.models import Account
 from analytics.web_server.dependences import get_session, get_current_account
 
 router = APIRouter(

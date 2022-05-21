@@ -6,6 +6,7 @@ import auth
 import database
 from analytics.web_server.dependences import get_auth_client
 from analytics.web_server.endpoints import accounts
+from analytics.web_server.endpoints import pulse
 
 logging.basicConfig(level=logging.INFO)
 
@@ -23,6 +24,7 @@ app = FastAPI(
 )
 
 app.include_router(accounts.router)
+app.include_router(pulse.router)
 
 
 @app.on_event('startup')
