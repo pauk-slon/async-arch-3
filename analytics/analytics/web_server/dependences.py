@@ -8,8 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import auth
 import database
-import event_streaming
-from task_tracker.models import Account
+from analytics.models import Account, AccountRole
 
 
 async def get_session():
@@ -48,9 +47,6 @@ async def get_current_account(
     account: Account | None = result.scalars().first()
     if not account:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unknown account")
+    if account.role != AccountRole.admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
     return account
-
-
-@cache
-def get_producer() -> event_streaming.Producer:
-    return event_streaming.Producer('task-tracker')

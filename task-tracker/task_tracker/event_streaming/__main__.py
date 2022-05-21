@@ -1,8 +1,8 @@
 import asyncio
 import logging
 
+import database
 import event_streaming
-from task_tracker import database
 import task_tracker.event_streaming.handlers  # noqa
 
 topics = 'accounts-stream', 'accounts'

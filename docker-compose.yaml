@@ -133,9 +133,33 @@ services:
       interval: 10s
       retries: 10
 
-  accounting-event-consumer:
+  accounting-web:
     image: accounting:last
     build: accounting
+    container_name: accounting-web
+    environment:
+      AUTH_OAUTH_CLIENT_ID: VzgL5jPx9_ZuaYNXTvj8yHjdf00e6ESLjMs5XsWOnjI
+      AUTH_OAUTH_CLIENT_SECRET: UBOaF8YpjdPKnsHQAxFRKFU2mtX8-TxzMiiTc0QQxgM
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+      DATABASE_URL: postgresql+asyncpg://accounting:accounting@accounting-db:5432/accounting
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    depends_on:
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: [ "uvicorn", "accounting.web_server.main:app", "--host", "0.0.0.0", "--reload" ]
+    ports:
+      - '3004:8000'
+    volumes:
+      - ./accounting:/app
+      - ./common:/common
+      - ./schemas:/schemas
+
+  accounting-event-consumer:
+    image: accounting:last
     container_name: accounting-consumer
     depends_on:
       accounting-db:
@@ -150,7 +174,7 @@ services:
       - ./accounting:/app
       - ./common:/common
       - ./schemas:/schemas
-    command: ["python", "-m", "accounting.event_streaming"]
+    command: ["python", "-m", "accounting.event_consuming"]
 
   accounting-db:
     image: postgres
@@ -168,3 +192,63 @@ services:
       timeout: 45s
       interval: 10s
       retries: 10
+
+  analytics-db:
+    image: postgres
+    container_name: analytics-db
+    volumes:
+      - .local/analytics-db:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: analytics
+      POSTGRES_USER: analytics
+      POSTGRES_PASSWORD: analytics
+    ports:
+      - '3005:5432'
+    healthcheck:
+      test: ["CMD", "pg_isready", "-q", "-U", "analytics"]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+
+  analytics-event-consumer:
+    image: analytics:last
+    build: analytics
+    container_name: analytics-consumer
+    depends_on:
+      analytics-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://analytics:analytics@analytics-db:5432/analytics
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    volumes:
+      - ./analytics:/app
+      - ./common:/common
+      - ./schemas:/schemas
+    command: ["python", "-m", "analytics.event_consuming"]
+
+  analytics-web:
+    image: analytics:last
+    container_name: analytics-web
+    environment:
+      AUTH_OAUTH_CLIENT_ID: JgizKBjJFcNlKn7yQqHYg5iQ6aiSqV0g0XlbgQa29V4
+      AUTH_OAUTH_CLIENT_SECRET: q9-NuulvvwHEOFAxZ6ReXiHR-9gunulMo0OGgm_l04Y
+      AUTH_URL: http://localhost:3000
+      AUTH_INTERNAL_URL: http://auth-web:3000
+      DATABASE_URL: postgresql+asyncpg://analytics:analytics@analytics-db:5432/analytics
+      EVENT_STREAMING_BOOTSTRAP_SERVERS: broker:29092
+      EVENT_STREAMING_SCHEMAS_DIRECTORY: /schemas
+    depends_on:
+      task-tracker-db:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: [ "uvicorn", "analytics.web_server.main:app", "--host", "0.0.0.0", "--reload" ]
+    ports:
+      - '3006:8000'
+    volumes:
+      - ./analytics:/app
+      - ./common:/common
+      - ./schemas:/schemas

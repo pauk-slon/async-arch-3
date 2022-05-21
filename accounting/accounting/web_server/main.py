@@ -1,14 +1,17 @@
+import logging
+
 from fastapi import FastAPI, Form, HTTPException, Depends
 
 import auth
 import database
 import event_streaming
-from task_tracker.web_server.dependences import get_auth_client, get_producer
-from task_tracker.web_server.endpoints import accounts
-from task_tracker.web_server.endpoints import tasks
+from accounting.web_server.dependences import get_auth_client, get_producer
+from accounting.web_server.endpoints import accounts, transactions, daily_profit
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
-    title="Task Tracker",
+    title="Accounting",
     swagger_ui_init_oauth={
         'clientId': get_auth_client().settings.oauth_client_id,
         'clientSecret': get_auth_client().settings.oauth_client_secret,
@@ -19,8 +22,10 @@ app = FastAPI(
         'persistAuthorization': True,
     }
 )
+
 app.include_router(accounts.router)
-app.include_router(tasks.router)
+app.include_router(transactions.router)
+app.include_router(daily_profit.router)
 
 
 @app.on_event('startup')

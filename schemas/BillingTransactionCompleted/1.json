@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+
+  "title": "BillingTransaction.Completed.v1",
+  "description": "Emits when a new billing transaction appears",
+
+  "definitions": {
+    "event_data": {
+      "type": "object",
+      "properties": {
+        "public_id": {
+          "type": "string"
+        },
+        "date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "business_day": {
+          "type": "string",
+          "format": "date"
+        },
+        "account": {
+          "type": "string"
+        },
+        "debit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "credit": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "details": {"anyOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "task_assignment"
+              },
+              "task": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "task"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "task_closing"
+              },
+              "task": {
+                "type": "string"
+              }
+            },
+            "required": ["type", "task"]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "payment"
+              }
+            },
+            "required": ["type"]
+          }
+        ]}
+      },
+      "required": [
+        "public_id",
+        "date",
+        "business_day",
+        "account",
+        "debit",
+        "credit",
+        "details"
+      ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "event_id":      { "type": "string" },
+    "event_version": { "const": 1 },
+    "event_name":    { "const": "BillingTransactionCompleted" },
+    "event_time":    { "type": "string" },
+    "producer":      { "type": "string" },
+
+    "data": { "$ref": "#/definitions/event_data" }
+  },
+
+  "required": [
+    "event_id",
+    "event_version",
+    "event_name",
+    "event_time",
+    "producer",
+    "data"
+  ]
+}

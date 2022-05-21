@@ -8,8 +8,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import auth
 import database
-import event_streaming
-from task_tracker.models import Account
+from event_streaming import Producer
+from accounting.event_producing import producer
+from accounting.models import Account
 
 
 async def get_session():
@@ -52,5 +53,5 @@ async def get_current_account(
 
 
 @cache
-def get_producer() -> event_streaming.Producer:
-    return event_streaming.Producer('task-tracker')
+def get_producer() -> Producer:
+    return producer

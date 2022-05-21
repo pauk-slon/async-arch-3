@@ -1,0 +1,12 @@
+FROM python:3.10
+ENV SCHEMAS_PATH /schemas
+RUN mkdir -p $SCHEMAS_PATH
+ENV COMMON_SRC_PATH /common
+RUN mkdir -p $COMMON_SRC_PATH
+ENV PYTHONPATH=$COMMON_SRC_PATH
+ENV APP_SRC_PATH /app
+RUN mkdir -p $APP_SRC_PATH
+WORKDIR $APP_SRC_PATH
+COPY requirements.txt $APP_SRC_PATH
+RUN pip install -r requirements.txt
+COPY . $APP_SRC_PATH

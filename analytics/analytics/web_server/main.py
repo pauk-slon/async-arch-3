@@ -1,14 +1,17 @@
+import logging
+
 from fastapi import FastAPI, Form, HTTPException, Depends
 
 import auth
 import database
-import event_streaming
-from task_tracker.web_server.dependences import get_auth_client, get_producer
-from task_tracker.web_server.endpoints import accounts
-from task_tracker.web_server.endpoints import tasks
+from analytics.web_server.dependences import get_auth_client
+from analytics.web_server.endpoints import accounts
+from analytics.web_server.endpoints import pulse
+
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(
-    title="Task Tracker",
+    title="Analytics",
     swagger_ui_init_oauth={
         'clientId': get_auth_client().settings.oauth_client_id,
         'clientSecret': get_auth_client().settings.oauth_client_secret,
@@ -19,19 +22,14 @@ app = FastAPI(
         'persistAuthorization': True,
     }
 )
+
 app.include_router(accounts.router)
-app.include_router(tasks.router)
+app.include_router(pulse.router)
 
 
 @app.on_event('startup')
 async def on_startup():
     await database.setup(database.Settings())
-    await get_producer().start(event_streaming.Settings())
-
-
-@app.on_event('shutdown')
-async def on_shutdown():
-    await get_producer().stop()
 
 
 @app.post('/oauth/token', include_in_schema=False)

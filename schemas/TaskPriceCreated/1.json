@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema#",
+
+  "title": "TaskPrice.Created.v1",
+  "definitions": {
+    "event_data": {
+      "type": "object",
+      "properties": {
+        "public_id": {
+          "type": "string"
+        },
+        "task": {
+          "type": "string"
+        },
+        "assignment_cost": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "closing_cost": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "required": [
+        "public_id",
+        "task",
+        "assignment_cost",
+        "closing_cost"
+      ]
+    }
+  },
+
+  "type": "object",
+
+  "properties": {
+    "event_id":      { "type": "string" },
+    "event_version": { "const": 1 },
+    "event_name":    { "const": "TaskPriceCreated" },
+    "event_time":    { "type": "string" },
+    "producer":      { "type": "string" },
+
+    "data": { "$ref": "#/definitions/event_data" }
+  },
+
+  "required": [
+    "event_id",
+    "event_version",
+    "event_name",
+    "event_time",
+    "producer",
+    "data"
+  ]
+}
